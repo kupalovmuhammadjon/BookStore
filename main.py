@@ -65,6 +65,11 @@ class MainWindow(QMainWindow):
         self.totallb.setGeometry(120, 845, 165, 40)
         self.totallb.setFont(QFont("Montserrat", 12, weight=65))
 
+        myOrdersbtn = QPushButton("Mening Buyurtmalarim", self)
+        myOrdersbtn.setGeometry(650, 845, 280, 40)
+        myOrdersbtn.setFont(QFont("Montserrat", 12, weight=65))
+        myOrdersbtn.clicked.connect(self.my_orders)
+        
         orderbtn = QPushButton("Buyurtma berish", self)
         orderbtn.setGeometry(1150, 845, 200, 40)
         orderbtn.setFont(QFont("Montserrat", 12, weight=65))
@@ -78,7 +83,6 @@ class MainWindow(QMainWindow):
         data = cursor.fetchall()
         self.name = data[0][0]
         self.surname = data[0][1]
-        print(data[0][0])
     
     def isBooksEmpty(self):
         cursor.execute("select * from books")
@@ -87,6 +91,21 @@ class MainWindow(QMainWindow):
             return False
         else:
             return True
+        
+    def my_orders(self):
+        global user_id
+        
+        query = f"""select b.bk_name, o.units, b.price
+        from users as u 
+        left join orders as o on o.user_id = u.user_id
+        left join books as b on b.book_id = o.book_id
+        where {user_id} = o.user_id"""
+        
+        cursor.execute(query)
+        data = cursor.fetchall()
+
+        orders = Myorders(data)
+        orders.exec_()
         
     def setup_books(self):
         if self.isBooksEmpty():
@@ -186,6 +205,10 @@ class MainWindow(QMainWindow):
         current_count = int(count_label.text())
 
         if current_count == 0 and value < 0:
+            for book in self.orderls:
+                if book[0] == book_id:
+                    self.orderls.remove(book)
+            
             return
 
         new_count = max(0, current_count + value)
@@ -216,8 +239,39 @@ class MainWindow(QMainWindow):
         self.total_price = 0
         self.totallb.setText("0")
 
-    
-            
+class Myorders(QDialog):
+    def __init__(self, data):
+        super().__init__()
+        self.data = data
+        self.setMinimumSize(700, 700)
+        self.setMaximumSize(700, 700)
+        self.setStyleSheet("background-color: #EAFFFF")
+        self.setWindowTitle("Order List")
+        self.setWindowIcon(QIcon("bookstore.ico"))
+
+        self.place_order_labels()
+
+    def place_order_labels(self):
+        scroll_area = QScrollArea(self)
+        scroll_area.setGeometry(10, 10, 680, 680)
+
+        scroll_contents = QWidget()
+        scroll_area.setWidget(scroll_contents)
+        scroll_layout = QVBoxLayout(scroll_contents)
+
+        for i in range(len(self.data)):
+            name = QLabel(self.data[i][0])
+            units = QLabel(str(self.data[i][1]))
+            price = QLabel(str(self.data[i][2]))
+
+            # Add labels to the layout
+            scroll_layout.addWidget(name)
+            scroll_layout.addWidget(units)
+            scroll_layout.addWidget(price)
+
+        scroll_contents.setLayout(scroll_layout)
+        scroll_area.setWidgetResizable(True)
+
 
         
             
